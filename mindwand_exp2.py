@@ -12,24 +12,9 @@ from random import choice, shuffle, sample
 # Eye tracking imports
 import pylinkwrapper
 
-# Window set-up
-win = visual.Window([1920, 1200], monitor='Asus', units='deg',
-                    fullscr=True, allowGUI=False,
-                    color=1, screen=0)
-# Stimuli
-fix = visual.Circle(win, radius=0.125, pos=(0, 0), fillColor=-1,
-                    lineColor=-1)
-# Make Noise nots
-dots = visual.DotStim(win, coherence=0, fieldSize=(25, 15), color=-1,
-                      nDots=10000)
-
 
 # Defining experiment contents
 class Experiment:
-    """
-    An experiment is set up with a set of target categories.
-    Calling setup() will create a dialog box asking the subject ID and which target (from target_cats) to use.
-    """
 
     def __init__(self, target_cats, questions):
         self.target_cats = target_cats
@@ -41,29 +26,40 @@ class Experiment:
         self.tracker = None
         self.image_files = []
         self.images_by_cat = {}
+        self.win = None
 
     # Running this will pop up a dialog asking what the subject ID and what the target category is
     def setup_subject(self):
+        print "setting up subject"
         expinfo = {'Subject ID': '', 'Target Category': self.target_cats}
         if not gui.DlgFromDict(expinfo, title='Subject Info').OK:
             core.quit()
         self.subj_id = expinfo['Subject ID']
         self.target = expinfo['Target Category']
 
+    def setup_window(self):
+        self.win = visual.Window([1920, 1200], monitor='Asus', units='deg',
+                                 fullscr=True, allowGUI=False,
+                                 color=1, screen=0)
+
+
     # Running this will set up the log file (the csv)
     def setup_log(self):
+        print "setting up log"
         log_fname = self.subj_id + '_mindwand_exp2.csv'
         log_file = open(os.path.join('data_exp2', log_fname), 'wb')
         self.log = csv.writer(log_file)
 
     # Running this will set up and calibrate the tracker
     def setup_tracker(self):
-        self.tracker = pylinkwrapper.connect(win, self.subj_id)
+        print "setting up tracker"
+        self.tracker = pylinkwrapper.connect(self.win, self.subj_id)
         self.tracker.tracker.setPupilSizeDiameter('YES')
         self.tracker.calibrate()
 
     # Running this will find all the image files (but not load them)
     def setup_image_files(self):
+        print "setting up image_files"
         self.image_files = [
             os.path.join(dirpath, f)
             for dirpath, dirnames, files in os.walk(os.path.join(os.getcwd(), 'images_exp2'))
@@ -71,9 +67,10 @@ class Experiment:
 
     # Running this (after setup_image_files) will load the found images
     def load_images(self):
+        print "loading images"
         def make_image(fpath, cat2, name):
             name1 = '{}.{}'.format(cat2, name)
-            img = visual.ImageStim(win, fpath, size=3, name=name1)
+            img = visual.ImageStim(self.win, fpath, size=3, name=name1)
             return img
 
         for ifn in self.image_files:
@@ -105,34 +102,37 @@ class Experiment:
 
     # Running this will show the instructions in a text box
     def show_instructions(self):
+        print "showing instructions"
         itxt = ('You are looking for {}!\n\n'
                 'If one is present - press ENTER\n\n'
                 'If one is NOT present - press the SPACEBAR'.format(self.target))
 
         itxt = itxt.replace('_', ' ')
 
-        visual.TextStim(win, itxt, color=-1, wrapWidth=25).draw()
-        win.flip()
+        visual.TextStim(self.win, itxt, color=-1, wrapWidth=25).draw()
+        self.win.flip()
         event.waitKeys()
 
     # Running this will ask the questions and return the responses (in the same order as the questions)
     def ask_questions(self):
+        print "asking questions"
         self.question_responses = []
         for question, scale in self.questions:
-            tob = visual.TextStim(win, text=question, color=-1)
-            sca = visual.RatingScale(win, scale=scale, textColor=-1,
+            tob = visual.TextStim(self.win, text=question, color=-1)
+            sca = visual.RatingScale(self.win, scale=scale, textColor=-1,
                                      lineColor=-1, noMouse=True)
             # Update until response
             while sca.noResponse:
                 tob.draw()
                 sca.draw()
-                win.flip()
+                self.win.flip()
 
             self.question_responses.append(sca.getRating())
             sca.reset()
 
     ## Experiment Structure
     def initialize_trials(self, bnum):
+        print "initializing trials for block {}".format(bnum)
         # make trials
         trial_list = []
         for reps in range(100):
@@ -168,7 +168,17 @@ class Experiment:
 
     ## Block Runner
     def run_block(self, bnum, hwrite = False, prac = False, last = False):
-        tut = TUTProbe()
+        print "running block {}".format(bnum)
+
+        # Stimuli
+        fix = visual.Circle(self.win, radius=0.125, pos=(0, 0), fillColor=-1,
+                            lineColor=-1)
+        # Make Noise nots
+        dots = visual.DotStim(self.win, coherence=0, fieldSize=(25, 15), color=-1,
+                              nDots=10000)
+
+        # TUT
+        tut = TUTProbe(self.win)
         # Initiate TUTprop clock
         tuttime = core.Clock()
         tutgo = np.random.randint(15, 31)
@@ -222,7 +232,7 @@ class Experiment:
             self.tracker.sendMessage('pupiltime')
             fix.draw()
             self.tracker.recordON()
-            win.flip()
+            self.win.flip()
             core.wait(1)
             self.tracker.recordOFF()
             self.tracker.setTrialResult()
@@ -267,7 +277,7 @@ class Experiment:
                 # Display
                 if lcount == 0:
                     lcount += 1
-                    stim_on = win.flip()
+                    stim_on = self.win.flip()
 
                     # Screenshot
                     #fileName = 'jessicascreen'
@@ -276,7 +286,7 @@ class Experiment:
                     #win.saveMovieFrames(fileName)
                     #win.movieFrames=[]
                 else:
-                    win.flip()
+                    self.win.flip()
 
                 # Check for key press
                 keyps = event.getKeys(keyList=['space', 'return', 'escape'],
@@ -331,8 +341,9 @@ class Experiment:
 
             # ISI
             fix.draw()
-            win.flip()
+            self.win.flip()
             core.wait(2)
+        fix
 
     def end(self):
         # Eye-tracker clean-up
@@ -342,16 +353,17 @@ class Experiment:
 
 ## TUT Probe
 class TUTProbe:
-    def __init__(self):
+    def __init__(self, win):
+        self.win = win
         # Make scale
         rtxt = ('On the scale below, rate the duration of task unrelated thoughts '
                 'since the last probe')
-        self.rtxtob = visual.TextStim(win, text=rtxt, pos=(0, 3), height=1,
+        self.rtxtob = visual.TextStim(self.win, text=rtxt, pos=(0, 3), height=1,
                                       color=-1)
 
         # Define rating scale
         sctxt = '0 = Not at all ... 5 = The whole time'
-        self.ratingScale = visual.RatingScale(win, low=0, high=5, scale=sctxt,
+        self.ratingScale = visual.RatingScale(self.win, low=0, high=5, scale=sctxt,
                                               labels=map(str, range(6)),
                                               tickMarks=range(6), textColor=-1,
                                               lineColor=-1, noMouse=True)
@@ -362,7 +374,7 @@ class TUTProbe:
         while self.ratingScale.noResponse:
             self.rtxtob.draw()
             self.ratingScale.draw()
-            win.flip()
+            self.win.flip()
 
         # Return and Reset
         rating = self.ratingScale.getRating()
@@ -371,6 +383,7 @@ class TUTProbe:
 
 ## Setup and Execute Experiment
 if __name__ == '__main__':
+    print "running main"
     # Experiment Setup
     exp = Experiment(
         target_cats=['Canidae', 'Felidae'],
@@ -380,13 +393,14 @@ if __name__ == '__main__':
         ]
     )
     exp.setup_subject()
+    exp.setup_window()
     exp.setup_log()
     exp.setup_tracker()
     exp.setup_image_files()
 
     # Make master list of images
-    visual.TextStim(win, 'Loading Images...', color=-1).draw()
-    win.flip()
+    visual.TextStim(exp.win, 'Loading Images...', color=-1).draw()
+    exp.win.flip()
     exp.load_images()
 
     exp.show_instructions()
