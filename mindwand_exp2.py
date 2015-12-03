@@ -389,7 +389,6 @@ class Experiment:
             fix.draw()
             self.win.flip()
             core.wait(2)
-        fix
 
     def end(self):
         # Eye-tracker clean-up
