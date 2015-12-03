@@ -13,6 +13,12 @@ from random import choice, shuffle, sample
 import pylinkwrapper
 
 
+class ImageCategory:
+    def __init__(self, target_cat, similar_cat):
+        self.target_cat = target_cat
+        self.similar_cat = similar_cat
+
+
 # Defining experiment contents
 class Experiment:
 
@@ -21,8 +27,9 @@ class Experiment:
         self.questions = questions
         self.question_responses = []
         self.subj_id = ''
-        self.target = ''
+        self.target = None
         self.log = None
+        self.image_log = None
         self.tracker = None
         self.image_files = []
         self.images_by_cat = {}
@@ -31,11 +38,12 @@ class Experiment:
     # Running this will pop up a dialog asking what the subject ID and what the target category is
     def setup_subject(self):
         print "setting up subject"
-        expinfo = {'Subject ID': '', 'Target Category': self.target_cats}
+        cats_by_target = dict([(cat.target_cat, cat) for cat in self.target_cats])
+        expinfo = {'Subject ID': '', 'Target Category': cats_by_target.keys()}
         if not gui.DlgFromDict(expinfo, title='Subject Info').OK:
             core.quit()
         self.subj_id = expinfo['Subject ID']
-        self.target = expinfo['Target Category']
+        self.target = cats_by_target[expinfo['Target Category']]
 
     def setup_window(self):
         self.win = visual.Window([1360, 768], monitor='samsung', units='deg',
@@ -49,6 +57,10 @@ class Experiment:
         log_fname = self.subj_id + '_mindwand_exp2.csv'
         log_file = open(os.path.join('data_exp2', log_fname), 'wb')
         self.log = csv.writer(log_file)
+
+        image_fname = self.subj_id + '_mindwand_exp2_imgs.csv'
+        image_file = open(os.path.join('data_exp2', image_fname), 'wb')
+        self.image_log = csv.writer(image_file)
 
     # Running this will set up and calibrate the tracker
     def setup_tracker(self):
@@ -88,15 +100,24 @@ class Experiment:
         print "Finding target images from: {}".format(self.images_by_cat.keys())
         target_images = []
         for (cat1, cat2), images in self.images_by_cat.iteritems():
-            if cat2 == self.target:
+            if cat2 == self.target.target_cat:
                 print "Found images: {}".format([img.name for img in images])
                 target_images += images
         return target_images
 
+    def get_similar_images(self):
+        print "Finding similar images from: {}".format(self.images_by_cat.keys())
+        similar_images = []
+        for (cat1, cat2), images in self.images_by_cat.iteritems():
+            if cat2 == self.target.similar_cat:
+                print "Found images: {}".format([img.name for img in images])
+                similar_images += images
+        return similar_images
+
     def get_distrators_by_cat1(self):
         distractors_by_cat1 = {}
         for (cat1, cat2), images in self.images_by_cat.iteritems():
-            if cat2 != self.target:
+            if cat2 != self.target.target_cat:
                 if cat1 not in distractors_by_cat1:
                     distractors_by_cat1[cat1] = []
                 distractors_by_cat1[cat1] += images
@@ -107,7 +128,7 @@ class Experiment:
         print "showing instructions"
         itxt = ('You are looking for {}!\n\n'
                 'If one is present - press ENTER\n\n'
-                'If one is NOT present - press the SPACEBAR'.format(self.target))
+                'If one is NOT present - press the SPACEBAR'.format(self.target.target_cat))
 
         itxt = itxt.replace('_', ' ')
 
@@ -139,15 +160,21 @@ class Experiment:
         trial_list = []
         for reps in range(100):
             # Target trial?
-            if reps < 81:
+            if reps < 61:
                 tarpres = False
+                simpres = False
+            elif reps < 81:
+                tarpres = False
+                simpres = True
             else:
                 tarpres = True
+                simpres = False
 
             trial_list.append({
                             'sub'     : self.subj_id,
-                            'tcat'    : self.target,
+                            'tcat'    : self.target.target_cat,
                             'tar'     : tarpres,
+                            'sim'     : simpres,
                             'resp'    : 'NA',
                             'rtype'   : 'NA',
                             'rt'      : 'NA',
@@ -185,6 +212,11 @@ class Experiment:
         tuttime = core.Clock()
         tutgo = np.random.randint(15, 31)
 
+        target_images = self.get_target_images()
+        print "Found target images: {}".format([img.name for img in target_images])
+        similar_images = self.get_similar_images()
+        print "Found similar images: {}".format([img.name for img in similar_images])
+
         # Make Trial list and iterate
         trial_list = self.initialize_trials(bnum)
         for trial in trial_list:
@@ -194,14 +226,13 @@ class Experiment:
             coords = [xy + np.random.uniform(-.5, .5, 2) for xy in coords]
 
             # Grab stimuli
-            target_images = self.get_target_images()
-            print "Found target images: {}".format([img.name for img in target_images])
             target_stim_index = np.random.randint(len(target_images)) # choose random target
             target_stim_image = target_images[target_stim_index]
 
-            category_distractors = []
-            for cat1, images in self.get_distrators_by_cat1().iteritems():
-                category_distractors.append(choice(images))
+            similar_stim_index = np.random.randint(len(similar_images)) # choose random similar
+            similar_stim_image = similar_images[similar_stim_index]
+
+            category_distractors = [choice(images) for images in self.get_distrators_by_cat1().values()]
 
             all_distractor_images = []
             for cat1, images in self.get_distrators_by_cat1().iteritems():
@@ -218,12 +249,20 @@ class Experiment:
             # Pick random target position
             tloc = np.random.randint(10)
 
+            # Write header for image log
+            if hwrite:
+                self.image_log.writerow(['tnum', 'image'])
+
             # Set coordinates for images
             for xyi, xy in enumerate(coords):
                 if trial['tar'] and xyi == tloc:
-                    target_stim_image.setPos(xy)
+                    image = target_stim_image
+                elif trial['sim'] and xyi == tloc:
+                    image = similar_stim_image
                 else:
-                    chosen_distractor_images[xyi].setPos(xy)
+                    image = chosen_distractor_images[xyi]
+                image.setPos(xy)
+                self.image_log.writerow([trial['tnum'], image.name])
 
             # Check for fixation
             self.tracker.fixCheck(2, .1, 'z')
@@ -251,6 +290,8 @@ class Experiment:
                 # set name
                 if trial['tar'] and csi == tloc:
                     name = 'target.%s' % target_stim_image.name
+                elif trial['sim'] and csi == tloc:
+                    name = 'similar.%s' % similar_stim_image.name
                 else:
                     name = 'nonTarget.%s' % chosen_distractor_images[csi].name
 
@@ -271,6 +312,8 @@ class Experiment:
                 for xyi, xy in enumerate(coords):
                     if trial['tar'] and xyi == tloc:
                         target_stim_image.draw()
+                    elif trial['sim'] and xyi == tloc:
+                        similar_stim_image.draw()
                     else:
                         chosen_distractor_images[xyi].draw()
 
@@ -389,8 +432,14 @@ if __name__ == '__main__':
     print "running main"
     # Experiment Setup
     exp = Experiment(
-        #target_cats=['Canidae', 'Felidae'],
-        target_cats=['Aircraft', 'Amphibians', 'Arachnids', 'Flowers', 'Gardening_Tools', 'Office_Tools'],
+        target_cats=[
+            #             target_cat          similar_cat
+            ImageCategory('Canidae',          'Felidae'         ),
+            ImageCategory('Felidae',          'Canidae'         ),
+            ImageCategory('Cars_Trucks',      'Utility_Vehicles'),
+            ImageCategory('Utility_Vehicles', 'Cars_Trucks'     ),
+            ImageCategory('Tops',             'Bottoms'         )
+        ],
         questions=[
             ('How hungry are you?', '1 = Not hungry ... 7 = Very hungry'),
             ('How tired are you?', '1 = Not tired ... 7 = Very tired')
