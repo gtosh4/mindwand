@@ -38,7 +38,7 @@ class Experiment:
         self.target = expinfo['Target Category']
 
     def setup_window(self):
-        self.win = visual.Window([1920, 1200], monitor='Asus', units='deg',
+        self.win = visual.Window([1360, 768], monitor='samsung', units='deg',
                                  fullscr=True, allowGUI=False,
                                  color=1, screen=0)
 
@@ -85,15 +85,17 @@ class Experiment:
             self.images_by_cat[(cat1, cat2)].append(make_image(fpath, cat2, name))
 
     def get_target_images(self):
+        print "Finding target images from: {}".format(self.images_by_cat.keys())
         target_images = []
-        for (cat1, cat2), images in self.images_by_cat:
+        for (cat1, cat2), images in self.images_by_cat.iteritems():
             if cat2 == self.target:
+                print "Found images: {}".format([img.name for img in images])
                 target_images += images
         return target_images
 
     def get_distrators_by_cat1(self):
         distractors_by_cat1 = {}
-        for (cat1, cat2), images in self.images_by_cat:
+        for (cat1, cat2), images in self.images_by_cat.iteritems():
             if cat2 != self.target:
                 if cat1 not in distractors_by_cat1:
                     distractors_by_cat1[cat1] = []
@@ -193,15 +195,16 @@ class Experiment:
 
             # Grab stimuli
             target_images = self.get_target_images()
+            print "Found target images: {}".format([img.name for img in target_images])
             target_stim_index = np.random.randint(len(target_images)) # choose random target
             target_stim_image = target_images[target_stim_index]
 
             category_distractors = []
-            for cat1, images in self.get_distrators_by_cat1():
+            for cat1, images in self.get_distrators_by_cat1().iteritems():
                 category_distractors.append(choice(images))
 
             all_distractor_images = []
-            for cat1, images in self.get_distrators_by_cat1():
+            for cat1, images in self.get_distrators_by_cat1().iteritems():
                 all_distractor_images += images
 
             random_distractors_by_name = {}
@@ -386,7 +389,8 @@ if __name__ == '__main__':
     print "running main"
     # Experiment Setup
     exp = Experiment(
-        target_cats=['Canidae', 'Felidae'],
+        #target_cats=['Canidae', 'Felidae'],
+        target_cats=['Aircraft', 'Amphibians', 'Arachnids', 'Flowers', 'Gardening_Tools', 'Office_Tools'],
         questions=[
             ('How hungry are you?', '1 = Not hungry ... 7 = Very hungry'),
             ('How tired are you?', '1 = Not tired ... 7 = Very tired')
@@ -403,12 +407,9 @@ if __name__ == '__main__':
     exp.win.flip()
     exp.load_images()
 
-    exp.show_instructions()
-
     # Ask questions
     exp.ask_questions()
 
-    # Instructions
     exp.show_instructions()
 
     # Start clock
