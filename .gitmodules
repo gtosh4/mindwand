@@ -1,4 +1,0 @@
-[submodule "pylinkwrapper"]
-	path = pylinkwrapper
-	url = git@github.com:ndiquattro/pylinkwrapper.git
-	branch = master
