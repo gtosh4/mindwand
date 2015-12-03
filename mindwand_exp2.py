@@ -7,7 +7,7 @@ from psychopy import visual
 from psychopy import core, event, gui
 import numpy as np
 import csv, fnmatch, os
-from random import choice, shuffle, sample
+from random import choice, shuffle
 
 # Eye tracking imports
 import pylinkwrapper
