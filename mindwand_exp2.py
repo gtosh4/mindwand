@@ -432,7 +432,7 @@ if __name__ == '__main__':
     # Experiment Setup
     exp = Experiment(
         target_categs=[
-            #             target_categ          similar_categ
+            #             target_categ        similar_categ
             ImageCategory('Canidae',          'Felidae'         ),
             ImageCategory('Felidae',          'Canidae'         ),
             ImageCategory('Cars_Trucks',      'Utility_Vehicles'),
