@@ -13,6 +13,7 @@ from random import choice, shuffle
 import pylinkwrapper
 
 
+# Defining category types
 class ImageCategory:
     def __init__(self, target_categ, similar_categ):
         self.target_categ = target_categ
@@ -22,23 +23,23 @@ class ImageCategory:
 # Defining experiment contents
 class Experiment:
 
-    def __init__(self, target_categs, questions):
-        self.target_categs = target_categs
-        self.questions = questions
-        self.question_responses = []
+    def __init__(self, categs, questions):
         self.subj_id = ''
         self.target = None
+        self.win = None
         self.log = None
         self.image_log = None
         self.tracker = None
         self.image_files = []
         self.images_by_categ = {}
-        self.win = None
+        self.questions = questions
+        self.question_responses = []
+        self.categs = categs
 
     # Running this will pop up a dialog asking what the subject ID and what the target category is
     def setup_subject(self):
         print "setting up subject"
-        cats_by_target = dict([(categ.target_categ, categ) for categ in self.target_categs])
+        cats_by_target = dict([(categ.target_categ, categ) for categ in self.categs])
         expinfo = {'Subject ID': '', 'Target Category': cats_by_target.keys()}
         if not gui.DlgFromDict(expinfo, title='Subject Info').OK:
             core.quit()
@@ -232,19 +233,29 @@ class Experiment:
             similar_stim_index = np.random.randint(len(similar_images)) # choose random similar
             similar_stim_image = similar_images[similar_stim_index]
 
-            category_distractors = [choice(images) for images in self.get_distrators_by_categ1().values()]
-
             all_distractor_images = []
             for categ1, images in self.get_distrators_by_categ1().iteritems():
                 all_distractor_images += images
 
-            random_distractors_by_name = {}
-            # choose 4 random distractors to make a final 10 distractor images
-            while len(random_distractors_by_name) != 4:
-                distractor = choice(all_distractor_images)
-                random_distractors_by_name[distractor.name] = distractor
+            images = []
+            # Add the level 2 distractors
+            images += [choice(images) for images in self.get_distrators_by_categ1().values()]
 
-            chosen_distractor_images = category_distractors + random_distractors_by_name.values()
+            # Add the target or similar if applicable
+            if trial['tar']:
+                images.append(target_stim_image)
+            elif trial['sim']:
+                images.append(similar_stim_image)
+
+            # Fill the remaining images with random distractors
+            while len(images) != 10:
+                distractor = choice(all_distractor_images)
+                add_distractor = True
+                for image in images:
+                    if distractor.name == image.name:
+                        add_distractor = False
+
+            images = shuffle(images_by_name.values())
 
             # Pick random target position
             tloc = np.random.randint(10)
@@ -255,14 +266,8 @@ class Experiment:
 
             # Set coordinates for images
             for xyi, xy in enumerate(coords):
-                if trial['tar'] and xyi == tloc:
-                    image = target_stim_image
-                elif trial['sim'] and xyi == tloc:
-                    image = similar_stim_image
-                else:
-                    image = chosen_distractor_images[xyi]
-                image.setPos(xy)
-                self.image_log.writerow([trial['tnum'], image.name])
+                images[xyi].setPos(xy)
+                self.image_log.writerow([trial['tnum'], images[xyi].name])
 
             # Check for fixation
             self.tracker.fixCheck(2, .1, 'z')
@@ -431,7 +436,7 @@ if __name__ == '__main__':
     print "running main"
     # Experiment Setup
     exp = Experiment(
-        target_categs=[
+        categs=[
             #             target_categ        similar_categ
             ImageCategory('Canidae',          'Felidae'         ),
             ImageCategory('Felidae',          'Canidae'         ),
