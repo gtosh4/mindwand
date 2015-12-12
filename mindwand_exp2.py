@@ -294,11 +294,11 @@ class Experiment:
             for csi, cs in enumerate(coords):
                 # set name
                 if trial['tar'] and csi == tloc:
-                    name = 'target.%s' % target_stim_image.name
+                    name = 'target.%s' % images[xyi]
                 elif trial['sim'] and csi == tloc:
-                    name = 'similar.%s' % similar_stim_image.name
+                    name = 'similar.%s' % images[xyi]
                 else:
-                    name = 'nonTarget.%s' % chosen_distractor_images[csi].name
+                    name = 'nonTarget.%s' % images[xyi]
 
                 self.tracker.drawIA(cs[0], cs[1], 3, csi+2, csi+2, name)
 
@@ -315,12 +315,7 @@ class Experiment:
             while not keyps:
                 # Images
                 for xyi, xy in enumerate(coords):
-                    if trial['tar'] and xyi == tloc:
-                        target_stim_image.draw()
-                    elif trial['sim'] and xyi == tloc:
-                        similar_stim_image.draw()
-                    else:
-                        chosen_distractor_images[xyi].draw()
+                    images[xyi].draw()
 
                 # Dots
                 dots.draw()
