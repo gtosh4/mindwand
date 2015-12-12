@@ -160,10 +160,10 @@ class Experiment:
         trial_list = []
         for reps in range(100):
             # Target trial?
-            if reps < 61:
+            if reps < 60:
                 tarpres = False
                 simpres = False
-            elif reps < 81:
+            elif reps < 80:
                 tarpres = False
                 simpres = True
             else:
