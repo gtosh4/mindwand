@@ -14,16 +14,16 @@ import pylinkwrapper
 
 
 class ImageCategory:
-    def __init__(self, target_cat, similar_cat):
-        self.target_cat = target_cat
-        self.similar_cat = similar_cat
+    def __init__(self, target_categ, similar_categ):
+        self.target_categ = target_categ
+        self.similar_categ = similar_categ
 
 
 # Defining experiment contents
 class Experiment:
 
-    def __init__(self, target_cats, questions):
-        self.target_cats = target_cats
+    def __init__(self, target_categs, questions):
+        self.target_categs = target_categs
         self.questions = questions
         self.question_responses = []
         self.subj_id = ''
@@ -32,13 +32,13 @@ class Experiment:
         self.image_log = None
         self.tracker = None
         self.image_files = []
-        self.images_by_cat = {}
+        self.images_by_categ = {}
         self.win = None
 
     # Running this will pop up a dialog asking what the subject ID and what the target category is
     def setup_subject(self):
         print "setting up subject"
-        cats_by_target = dict([(cat.target_cat, cat) for cat in self.target_cats])
+        cats_by_target = dict([(categ.target_categ, categ) for categ in self.target_categs])
         expinfo = {'Subject ID': '', 'Target Category': cats_by_target.keys()}
         if not gui.DlgFromDict(expinfo, title='Subject Info').OK:
             core.quit()
@@ -80,8 +80,8 @@ class Experiment:
     # Running this (after setup_image_files) will load the found images
     def load_images(self):
         print "loading images"
-        def make_image(fpath, cat2, name):
-            name1 = '{}.{}'.format(cat2, name)
+        def make_image(fpath, categ2, name):
+            name1 = '{}.{}'.format(categ2, name)
             img = visual.ImageStim(self.win, fpath, size=3, name=name1)
             return img
 
@@ -89,46 +89,46 @@ class Experiment:
             fsplit = ifn.split(os.sep)
             fpath = ifn
             # Example fpath: images_exp2\living\Mammals\Canidae\can_1.jpg
-            cat1 = fsplit[-3] # Example Mammals
-            cat2 = fsplit[-2] # Example Canidae
+            categ1 = fsplit[-3] # Example Mammals
+            categ2 = fsplit[-2] # Example Canidae
             name = os.path.splitext(fsplit[-1])[0]
-            if (cat1, cat2) not in self.images_by_cat:
-                self.images_by_cat[(cat1, cat2)] = []
-            self.images_by_cat[(cat1, cat2)].append(make_image(fpath, cat2, name))
+            if (categ1, categ2) not in self.images_by_categ:
+                self.images_by_categ[(categ1, categ2)] = []
+            self.images_by_categ[(categ1, categ2)].append(make_image(fpath, categ2, name))
 
     def get_target_images(self):
-        print "Finding target images from: {}".format(self.images_by_cat.keys())
+        print "Finding target images from: {}".format(self.images_by_categ.keys())
         target_images = []
-        for (cat1, cat2), images in self.images_by_cat.iteritems():
-            if cat2 == self.target.target_cat:
+        for (categ1, categ2), images in self.images_by_categ.iteritems():
+            if categ2 == self.target.target_categ:
                 print "Found images: {}".format([img.name for img in images])
                 target_images += images
         return target_images
 
     def get_similar_images(self):
-        print "Finding similar images from: {}".format(self.images_by_cat.keys())
+        print "Finding similar images from: {}".format(self.images_by_categ.keys())
         similar_images = []
-        for (cat1, cat2), images in self.images_by_cat.iteritems():
-            if cat2 == self.target.similar_cat:
+        for (categ1, categ2), images in self.images_by_categ.iteritems():
+            if categ2 == self.target.similar_categ:
                 print "Found images: {}".format([img.name for img in images])
                 similar_images += images
         return similar_images
 
-    def get_distrators_by_cat1(self):
-        distractors_by_cat1 = {}
-        for (cat1, cat2), images in self.images_by_cat.iteritems():
-            if cat2 != self.target.target_cat:
-                if cat1 not in distractors_by_cat1:
-                    distractors_by_cat1[cat1] = []
-                distractors_by_cat1[cat1] += images
-        return distractors_by_cat1
+    def get_distrators_by_categ1(self):
+        distractors_by_categ1 = {}
+        for (categ1, categ2), images in self.images_by_categ.iteritems():
+            if categ2 != self.target.target_categ:
+                if categ1 not in distractors_by_categ1:
+                    distractors_by_categ1[categ1] = []
+                distractors_by_categ1[categ1] += images
+        return distractors_by_categ1
 
     # Running this will show the instructions in a text box
     def show_instructions(self):
         print "showing instructions"
         itxt = ('You are looking for {}!\n\n'
                 'If one is present - press ENTER\n\n'
-                'If one is NOT present - press the SPACEBAR'.format(self.target.target_cat))
+                'If one is NOT present - press the SPACEBAR'.format(self.target.target_categ))
 
         itxt = itxt.replace('_', ' ')
 
@@ -172,7 +172,7 @@ class Experiment:
 
             trial_list.append({
                             'sub'     : self.subj_id,
-                            'tcat'    : self.target.target_cat,
+                            'tcateg'    : self.target.target_categ,
                             'tar'     : tarpres,
                             'sim'     : simpres,
                             'resp'    : 'NA',
@@ -232,10 +232,10 @@ class Experiment:
             similar_stim_index = np.random.randint(len(similar_images)) # choose random similar
             similar_stim_image = similar_images[similar_stim_index]
 
-            category_distractors = [choice(images) for images in self.get_distrators_by_cat1().values()]
+            category_distractors = [choice(images) for images in self.get_distrators_by_categ1().values()]
 
             all_distractor_images = []
-            for cat1, images in self.get_distrators_by_cat1().iteritems():
+            for categ1, images in self.get_distrators_by_categ1().iteritems():
                 all_distractor_images += images
 
             random_distractors_by_name = {}
@@ -431,8 +431,8 @@ if __name__ == '__main__':
     print "running main"
     # Experiment Setup
     exp = Experiment(
-        target_cats=[
-            #             target_cat          similar_cat
+        target_categs=[
+            #             target_categ          similar_categ
             ImageCategory('Canidae',          'Felidae'         ),
             ImageCategory('Felidae',          'Canidae'         ),
             ImageCategory('Cars_Trucks',      'Utility_Vehicles'),
