@@ -254,11 +254,10 @@ class Experiment:
                 for image in images:
                     if distractor.name == image.name:
                         add_distractor = False
+                if add_distractor:
+                    images.append(distractor)
 
-            images = shuffle(images_by_name.values())
-
-            # Pick random target position
-            tloc = np.random.randint(10)
+            images = shuffle(images)
 
             # Write header for image log
             if hwrite:
@@ -293,12 +292,12 @@ class Experiment:
             self.tracker.drawIA(0, 0, 2, 1, 1, 'fixation')
             for csi, cs in enumerate(coords):
                 # set name
-                if trial['tar'] and csi == tloc:
-                    name = 'target.%s' % images[xyi]
-                elif trial['sim'] and csi == tloc:
-                    name = 'similar.%s' % images[xyi]
+                if images[csi] is target_stim_image:
+                    name = 'target.%s' % images[csi]
+                elif images[csi] is similar_stim_image:
+                    name = 'similar.%s' % images[csi]
                 else:
-                    name = 'nonTarget.%s' % images[xyi]
+                    name = 'nonTarget.%s' % images[csi]
 
                 self.tracker.drawIA(cs[0], cs[1], 3, csi+2, csi+2, name)
 
