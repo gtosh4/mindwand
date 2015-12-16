@@ -218,6 +218,8 @@ class Experiment:
         header = [
             'sub',      # Subject id
             'tcateg',   # Target category
+            'tnum',     # Trial number
+            'bnum',     # Block number
             'tar',      # If target was present
             'sim',      # If similar was present
             'resp',     # The response key
@@ -282,6 +284,8 @@ class Experiment:
                 trial_results = dict(
                     sub=subject_id,
                     tcateg=target_category,
+                    tnum=current_trial_num,
+                    bnum=(block_num + 1),
                     tar=(trial.type == 'target' or trial.trial_type == 'similar'),
                     sim=(trial.trial_type == 'similar'),
                     resp=key,
