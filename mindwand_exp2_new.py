@@ -287,7 +287,7 @@ class Experiment:
                     tcateg=target_category,
                     tnum=current_trial_num,
                     bnum=(block_num + 1),
-                    tar=(trial.type == 'target' or trial.trial_type == 'similar'),
+                    tar=(trial.trial_type == 'target' or trial.trial_type == 'similar'),
                     sim=(trial.trial_type == 'similar'),
                     resp=key,
                     rtype=response_type,
