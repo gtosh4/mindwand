@@ -174,11 +174,12 @@ class Block:
 
 
 class Experiment:
-    def __init__(self, subject, questions, blocks, images):
+    def __init__(self, subject, questions, blocks, images, auto_run):
         self.subject = subject
         self.questions = questions
         self.blocks = blocks
         self.images = images
+        self.auto_run = auto_run
 
     def ask_questions(self, window):
         question_responses = []
@@ -258,7 +259,7 @@ class Experiment:
                 trial_time = round(exptime.getTime(), 2)
 
                 # Draw images and await a response
-                key, response_time = trial.draw_loop(window, dots)
+                key, response_time = trial.draw_loop(window, dots, auto_run)
 
                 # Quit?
                 if key == 'escape':
@@ -309,7 +310,8 @@ class Experiment:
                 # ISI
                 fix.draw()
                 window.flip()
-                core.wait(2)
+                if not auto_run:
+                    core.wait(2)
 
         tracker.endExperiment(experiment_path)
         core.quit()
@@ -339,7 +341,8 @@ class Trial:
         fix.draw()
         tracker.recordON()
         window.flip()
-        core.wait(1)
+        if not auto_run:
+            core.wait(1)
         tracker.recordOFF()
         tracker.setTrialResult()
 
@@ -366,7 +369,7 @@ class Trial:
 
             tracker.drawIA(xy[0], xy[1], 3, index + 2, index + 2, name)
 
-    def draw_loop(self, window, dots):
+    def draw_loop(self, window, dots, auto_run):
         keyps = []
         start_time = None
         while not keyps:
@@ -385,6 +388,13 @@ class Trial:
             # Check for key press
             keyps = event.getKeys(keyList=['space', 'return', 'escape'],
                                   timeStamped=True)
+            
+            if auto_run and not keyps: # Have the computer give a response if auto_run is set
+                return (
+                    choice(['space', 'return']), # Return a random key
+                    0, # Zero response time for computers
+                )
+            
         return (
             keyps[0][0],  # Key pressed
             start_time - keyps[0][1],  # Response time
@@ -485,7 +495,7 @@ def load_images(window, source_dir):
     return images
 
 
-def main():
+def main(auto_run):
     subject = create_subject(
         important_categories=[
             ImportantCategory('Dog', 'Cat', '?'),
@@ -515,6 +525,7 @@ def main():
             Block(8, 4, 48),
         ],
         images=images,
+        auto_run=auto_run,
     )
     output_file = csv.writer(open(os.path.join(os.getcwd(), 'data_exp2', subject.id + '_mindwand_exp2.csv'), 'wb'))
     experiment_path = 'C:\\edfs\\Nick\\mindwand\\'
@@ -523,4 +534,5 @@ def main():
 
 
 if __name__ == '__main__':  # If this file was run directly
-    main()
+    # Change auto_run to true to have the computer set keys randomly
+    main(auto_run=false)
