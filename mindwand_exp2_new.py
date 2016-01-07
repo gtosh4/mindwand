@@ -534,5 +534,5 @@ def main(auto_run):
 
 
 if __name__ == '__main__':  # If this file was run directly
-    # Change auto_run to true to have the computer set keys randomly
-    main(auto_run=false)
+    # Change auto_run to True to have the computer set keys randomly
+    main(auto_run=False)
