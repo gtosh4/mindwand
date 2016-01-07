@@ -42,7 +42,7 @@ class Block:
             lambda image: image.categories[0] == important_category.target,
             images
         )
-
+        
         all_similar_images = filter(
             lambda image: image.categories[0] == important_category.similar,
             images
@@ -240,7 +240,7 @@ class Experiment:
                 current_trial_num += 1
 
 
-                trial.setup_tracker(window, tracker, fix)
+                trial.setup_tracker(window, tracker, fix, self.auto_run)
 
                 # Eye-tracker pre-stim
                 statmsg = 'Experiment {}%% complete. Current Trial: {}'.format(
@@ -259,7 +259,7 @@ class Experiment:
                 trial_time = round(exptime.getTime(), 2)
 
                 # Draw images and await a response
-                key, response_time = trial.draw_loop(window, dots, auto_run)
+                key, response_time = trial.draw_loop(window, dots, self.auto_run)
 
                 # Quit?
                 if key == 'escape':
@@ -310,7 +310,7 @@ class Experiment:
                 # ISI
                 fix.draw()
                 window.flip()
-                if not auto_run:
+                if not self.auto_run:
                     core.wait(2)
 
         tracker.endExperiment(experiment_path)
@@ -329,7 +329,7 @@ class Trial:
         self.important_category = important_category
         self.trial_type = trial_type
 
-    def setup_tracker(self, window, tracker, fix):
+    def setup_tracker(self, window, tracker, fix, auto_run):
         # Check for fixation
         tracker.fixCheck(2, 0.1, 'z')
 
