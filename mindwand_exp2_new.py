@@ -42,11 +42,17 @@ class Block:
             lambda image: image.categories[0] == important_category.target,
             images
         )
+
+        if not all_target_images:
+            raise AssertionError('No images found for target: {}'.format(important_category.target))
         
         all_similar_images = filter(
             lambda image: image.categories[0] == important_category.similar,
             images
         )
+        
+        if not all_similar_images:
+            raise AssertionError('No images found for similar: {}'.format(important_category.similar))
 
         def is_distractor(image):
             return (
