@@ -203,7 +203,7 @@ class Experiment:
             scale_rating.reset()
         return question_responses
 
-    def run(self, window, tracker, output_file, experiment_path):
+    def run(self, window, tracker, output_file, experiment_path, image_log_file):
         subject_id = self.subject.id
         target_category = self.subject.target.target
         question_responses = self.ask_questions(window)
@@ -239,12 +239,30 @@ class Experiment:
             'tired',    # The second question's response
         ]
         output_file.writerow(header)
+
+        image_log_header = [
+            'sub',
+            'tnum',
+            'name',
+            'categories',
+        ]
+        if image_log_file:
+            image_log_file.writerow(image_log_header)
+        
         total_trials = sum(block.total_trials for block in self.blocks)
         current_trial_num = 1
         for block_num, block in enumerate(self.blocks):
             for trial_num, trial in enumerate(block.generate_trials(self.images, self.subject.target)):
                 current_trial_num += 1
 
+                if image_log_file:
+                    for image in trial.images:
+                        image_log_file.writerow([
+                            subject_id,
+                            current_trial_num,
+                            image.name,
+                            ':'.join(image.categories),
+                        ])
 
                 trial.setup_tracker(window, tracker, fix, self.auto_run)
 
@@ -504,9 +522,11 @@ def load_images(window, source_dir):
 def main(auto_run):
     subject = create_subject(
         important_categories=[
-            ImportantCategory('Dog', 'Cat', '?'),
-            ImportantCategory('Cat', 'Dog', '?'),
+            ImportantCategory('Dogs', 'Cats', 'Utility_Vehicle'),
+            ImportantCategory('Cats', 'Dogs', 'Cars_Trucks'),
         ])
+    # Create the window after creating the subject so that the window doesn't block the view of the
+    # subject dialog box
     window = visual.Window([1360, 768], monitor='samsung', units='deg',
                            fullscr=True, allowGUI=False,
                            color=1, screen=0)
@@ -534,9 +554,12 @@ def main(auto_run):
         auto_run=auto_run,
     )
     output_file = csv.writer(open(os.path.join(os.getcwd(), 'data_exp2', subject.id + '_mindwand_exp2.csv'), 'wb'))
+    # To disable image logging, comment out the following line and uncomment the line after.
+    image_log_file = csv.writer(open(os.path.join(os.getcwd(), 'data_exp2', subject.id + '_mindwand_exp2_images.csv'), 'wb'))
+    # image_log_file = None
     experiment_path = 'C:\\edfs\\Nick\\mindwand\\'
 
-    exp.run(window, tracker, output_file, experiment_path)
+    exp.run(window, tracker, output_file, experiment_path, image_log_file)
 
 
 if __name__ == '__main__':  # If this file was run directly
