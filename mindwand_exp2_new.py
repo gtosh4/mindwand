@@ -28,83 +28,11 @@ class ImportantCategory:
 
 
 class Block:
-    def __init__(self, targets, similars, randoms):
-        self.targets = targets
-        self.similars = similars
-        self.randoms = randoms
-        self.total_trials = targets + similars + randoms
-
-    def generate_target_trials(self, important_category, all_target_images, all_distractors, distractors_by_level1):
-        trials = []
-        for target_trial_num in range(self.targets):  # Create 'self.targets' number of target trials
-            trial_images = [choice(all_target_images)]
-            trial_images.extend([
-                                    choice(level1_images)  # Choose a random images from the level1 images
-                                    for level1_images in distractors_by_level1.values()
-                                    # Go through all level1 categories
-                                    ])
-            while len(trial_images) < 10:
-                distractor = choice(all_distractors)
-                is_duplicate = False  # Default to not a duplicate
-                for image in trial_images:
-                    if image.categories[0] == distractor.categories[0]:
-                        is_duplicate = True
-
-                if not is_duplicate:  # Only add non-duplicates to the trial images
-                    trial_images.append(distractor)
-
-            trials.append(Trial(trial_images, important_category, 'target'))
-        return trials
-
-    def generate_similar_trials(self, important_category, all_target_images, all_distractors, all_similar_images,
-                                distractors_by_level1):
-        trials = []
-        for similar_trial_num in range(self.similars):  # Create 'self.similars' number of similar trials
-            trial_images = [
-                choice(all_target_images),
-                choice(all_similar_images),
-            ]
-
-            for level1_images in distractors_by_level1.values():
-                level1_image = choice(level1_images)
-                while level1_image.categories[0] == important_category.similar:  # Check if similar category is chosen
-                    level1_image = choice(level1_images)  # Pick a new random one from the same level1
-                trial_images.append(level1_image)
-
-            while len(trial_images) < 10:
-                distractor = choice(all_distractors)
-                is_duplicate = False
-                for image in trial_images:
-                    if image.categories[0] == distractor.categories[0]:
-                        is_duplicate = True
-
-                if not is_duplicate:
-                    trial_images.append(distractor)
-
-            trials.append(Trial(trial_images, important_category, 'similar'))
-        return trials
-
-    def generate_random_trials(self, important_category, all_distractors, distractors_by_level1):
-        trials = []
-        for random_trial_num in range(self.randoms):  # Create 'self.randoms' number of random trials
-            trial_images = []
-            trial_images.extend([
-                                    choice(level1_images)  # Choose a random images from the level1 images
-                                    for level1_images in distractors_by_level1.values()
-                                    # Go through all level1 categories
-                                    ])
-            while len(trial_images) < 10:
-                distractor = choice(all_distractors)
-                is_duplicate = False
-                for image in trial_images:
-                    if image.categories[0] == distractor.categories[0]:
-                        is_duplicate = True
-
-                if not is_duplicate:
-                    trial_images.append(distractor)
-
-            trials.append(Trial(trial_images, important_category, 'random'))
-        return trials
+    def __init__(self, number_of_target_trials, number_of_similars_trials, number_of_random_trials):
+        self.number_of_target_trials = number_of_target_trials
+        self.number_of_similars_trials = number_of_similars_trials
+        self.number_of_random_trials = number_of_random_trials
+        self.total_trials = number_of_target_trials + number_of_similars_trials + number_of_random_trials
 
     def generate_trials(self, images, important_category):
         # Filters for target images at level 0
@@ -178,6 +106,78 @@ class Block:
         trials.extend(self.generate_random_trials(important_category, all_distractors, distractors_by_level1))
 
         shuffle(trials)
+        return trials
+
+    def generate_target_trials(self, important_category, all_target_images, all_distractors, distractors_by_level1):
+        trials = []
+        for target_trial_num in range(self.number_of_target_trials):
+            trial_images = [choice(all_target_images)]
+            trial_images.extend([
+                                    choice(level1_images)  # Choose a random images from the level1 images
+                                    for level1_images in distractors_by_level1.values()
+                                    # Go through all level1 categories
+                                    ])
+            while len(trial_images) < 10:
+                distractor = choice(all_distractors)
+                is_duplicate = False  # Default to not a duplicate
+                for image in trial_images:
+                    if image.categories[0] == distractor.categories[0]:
+                        is_duplicate = True
+
+                if not is_duplicate:  # Only add non-duplicates to the trial images
+                    trial_images.append(distractor)
+
+            trials.append(Trial(trial_images, important_category, 'target'))
+        return trials
+
+    def generate_similar_trials(self, important_category, all_target_images, all_distractors, all_similar_images,
+                                distractors_by_level1):
+        trials = []
+        for similar_trial_num in range(self.number_of_similars_trials):
+            trial_images = [
+                choice(all_target_images),
+                choice(all_similar_images),
+            ]
+
+            for level1_images in distractors_by_level1.values():
+                level1_image = choice(level1_images)
+                while level1_image.categories[0] == important_category.similar:  # Check if similar category is chosen
+                    level1_image = choice(level1_images)  # Pick a new random one from the same level1
+                trial_images.append(level1_image)
+
+            while len(trial_images) < 10:
+                distractor = choice(all_distractors)
+                is_duplicate = False
+                for image in trial_images:
+                    if image.categories[0] == distractor.categories[0]:
+                        is_duplicate = True
+
+                if not is_duplicate:
+                    trial_images.append(distractor)
+
+            trials.append(Trial(trial_images, important_category, 'similar'))
+        return trials
+
+    def generate_random_trials(self, important_category, all_distractors, distractors_by_level1):
+        trials = []
+        for random_trial_num in range(self.number_of_random_trials):
+            trial_images = []
+            trial_images.extend([
+                                    choice(level1_images)  # Choose a random images from the level1 images
+                                    for level1_images in distractors_by_level1.values()
+                                    # Go through all level1 categories
+                                    ])
+            while len(trial_images) < 10:
+                distractor = choice(all_distractors)
+                is_duplicate = False
+                for image in trial_images:
+                    if image.categories[0] == distractor.categories[0]:
+                        is_duplicate = True
+
+                if not is_duplicate:
+                    trial_images.append(distractor)
+
+            trials.append(Trial(trial_images, important_category, 'random'))
         return trials
 
 
