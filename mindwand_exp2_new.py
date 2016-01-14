@@ -30,7 +30,7 @@ class ImportantCategory:
 class Block:
     def __init__(self, number_of_target_trials, number_of_similars_trials, number_of_random_trials):
         self.number_of_target_trials = number_of_target_trials
-        self.number_of_similars_trials = number_of_similars_trials
+        self.number_of_similar_trials = number_of_similar_trials
         self.number_of_random_trials = number_of_random_trials
         self.total_trials = number_of_target_trials + number_of_similars_trials + number_of_random_trials
 
@@ -133,7 +133,7 @@ class Block:
     def generate_similar_trials(self, important_category, all_target_images, all_distractors, all_similar_images,
                                 distractors_by_level1):
         trials = []
-        for similar_trial_num in range(self.number_of_similars_trials):
+        for similar_trial_num in range(self.number_of_similar_trials):
             trial_images = [
                 choice(all_target_images),
                 choice(all_similar_images),
