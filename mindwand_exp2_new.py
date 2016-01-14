@@ -34,78 +34,6 @@ class Block:
         self.randoms = randoms
         self.total_trials = targets + similars + randoms
 
-    def generate_trials(self, images, important_category):
-        trials = []  # empty trial list
-
-        # Filters for target images at level 0
-        all_target_images = filter(
-            lambda image: image.categories[0] == important_category.target,
-            images
-        )
-
-        if not all_target_images:
-            raise AssertionError('No images found for target: {}'.format(important_category.target))
-        
-        all_similar_images = filter(
-            lambda image: image.categories[0] == important_category.similar,
-            images
-        )
-        
-        if not all_similar_images:
-            raise AssertionError('No images found for similar: {}'.format(important_category.similar))
-
-        def is_distractor(image):
-            return (
-                image.categories[0] != important_category.target and  # Exclude target images
-                image.categories[0] != important_category.remove  # Exclude images from the 'remove' category
-            )
-
-        all_distractors = filter(is_distractor, images)
-
-        distractors_by_level1 = {}
-        #######
-        # >>> desired = {
-        # ...     'mammal': ['dog1', 'dog2', 'cat1', 'cat2'],
-        # ...     'plant': ['fruit1', 'fruit2', 'tree1', 'tree2'],
-        # ... }
-        # >>> db = {}
-        # >>> db
-        # {}
-        # >>> level1 = 'mammal'
-        # >>> level1 not in db
-        # True
-        # >>> db[level1] = []
-        # >>> db
-        # {'mammal': []}
-        # >>> db[level1].append('dog1')
-        # >>> db
-        # {'mammal': ['dog1']}
-        # >>> level1 not in db
-        # False
-        # >>> db[level1].append('dog2')
-        # >>> db
-        # {'mammal': ['dog1', 'dog2']}
-        #######
-        for image in all_distractors:
-            level1 = image.categories[1]
-            if level1 not in distractors_by_level1:  # Don't overwrite if the level1 is already there
-                distractors_by_level1[level1] = []  # Initialize level1 to empty list
-            distractors_by_level1[level1].append(image)  # Add image to its level1 list
-
-        # Generate and add the target trials
-        trials.extend(self.generate_target_trials(important_category, all_target_images, all_distractors,
-                                                  distractors_by_level1))
-
-        # Generate and add the similar trials
-        trials.extend(self.generate_similar_trials(important_category, all_target_images, all_distractors,
-                                                   all_similar_images, distractors_by_level1))
-
-        # Generate and add the random trials
-        trials.extend(self.generate_random_trials(important_category, all_distractors, distractors_by_level1))
-
-        shuffle(trials)
-        return trials
-
     def generate_target_trials(self, important_category, all_target_images, all_distractors, distractors_by_level1):
         trials = []
         for target_trial_num in range(self.targets):  # Create 'self.targets' number of target trials
@@ -176,6 +104,80 @@ class Block:
                     trial_images.append(distractor)
 
             trials.append(Trial(trial_images, important_category, 'random'))
+        return trials
+
+    def generate_trials(self, images, important_category):
+        # Filters for target images at level 0
+        all_target_images = filter(
+            lambda image: image.categories[0] == important_category.target,
+            images
+        )
+
+        # Crash the program if no target images are found
+        if not all_target_images:
+            raise AssertionError('No images found for target: {}'.format(important_category.target))
+        
+        all_similar_images = filter(
+            lambda image: image.categories[0] == important_category.similar,
+            images
+        )
+
+        if not all_similar_images:
+            raise AssertionError('No images found for similar: {}'.format(important_category.similar))
+
+        def is_distractor(image):
+            return (
+                image.categories[0] != important_category.target and  # Exclude target images
+                image.categories[0] != important_category.remove  # Exclude images from the 'remove' category
+            )
+
+        all_distractors = filter(is_distractor, images)
+
+        # important for selecting by level1
+        distractors_by_level1 = {}
+        #######
+        # >>> desired = {
+        # ...     'mammal': ['dog1', 'dog2', 'cat1', 'cat2'],
+        # ...     'plant': ['fruit1', 'fruit2', 'tree1', 'tree2'],
+        # ... }
+        # >>> db = {}
+        # >>> db
+        # {}
+        # >>> level1 = 'mammal'
+        # >>> level1 not in db
+        # True
+        # >>> db[level1] = []
+        # >>> db
+        # {'mammal': []}
+        # >>> db[level1].append('dog1')
+        # >>> db
+        # {'mammal': ['dog1']}
+        # >>> level1 not in db
+        # False
+        # >>> db[level1].append('dog2')
+        # >>> db
+        # {'mammal': ['dog1', 'dog2']}
+        #######
+        for image in all_distractors:
+            level1 = image.categories[1]
+            if level1 not in distractors_by_level1:  # Don't overwrite if the level1 is already there
+                distractors_by_level1[level1] = []  # Initialize level1 to empty list
+            distractors_by_level1[level1].append(image)  # Add image to its level1 list
+
+        trials = []  # empty trial list
+
+        # Generate and add the target trials
+        trials.extend(self.generate_target_trials(important_category, all_target_images, all_distractors,
+                                                  distractors_by_level1))
+
+        # Generate and add the similar trials
+        trials.extend(self.generate_similar_trials(important_category, all_target_images, all_distractors,
+                                                   all_similar_images, distractors_by_level1))
+
+        # Generate and add the random trials
+        trials.extend(self.generate_random_trials(important_category, all_distractors, distractors_by_level1))
+
+        shuffle(trials)
         return trials
 
 
