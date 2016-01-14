@@ -27,6 +27,141 @@ class ImportantCategory:
         self.remove = remove
 
 
+class Subject:
+    def __init__(self, id, target):
+        self.id = id
+        self.target = target
+
+
+# TUT Probe
+class TUTProbe:
+    def __init__(self, win):
+        self.win = win
+        # Make scale
+        rtxt = ('On the scale below, rate the duration of task unrelated thoughts '
+                'since the last probe')
+        self.rtxtob = visual.TextStim(self.win, text=rtxt, pos=(0, 3), height=1,
+                                      color=-1)
+
+        # Define rating scale
+        sctxt = '0 = Not at all ... 5 = The whole time'
+        self.ratingScale = visual.RatingScale(self.win, low=0, high=5, scale=sctxt,
+                                              labels=map(str, range(6)),
+                                              tickMarks=range(6), textColor=-1,
+                                              lineColor=-1, noMouse=True)
+        # Initiate TUTprop clock
+        self.time = core.Clock()
+        self.next_probe = np.random.randint(15, 31)
+
+    def try_probe(self, is_last_trial):
+        probetime = self.time.getTime()
+        # Only test TUT every 15-31 seconds (randomly) or on the last trial
+        if probetime >= self.next_probe or is_last_trial:
+            # Prope TUT severity & reset
+            tutrating = self.probe()
+            self.time.reset()
+            self.next_probe = np.random.randint(15, 31)
+
+            # Save Results
+            return (
+                tutrating,
+                round(probetime, 2)
+            )
+        else:
+            return (0, 0)
+
+    # Function for display
+    def probe(self):
+        # Display and collect response
+        while self.ratingScale.noResponse:
+            self.rtxtob.draw()
+            self.ratingScale.draw()
+            self.win.flip()
+
+        # Return and Reset
+        rating = self.ratingScale.getRating()
+        self.ratingScale.reset()
+        return rating
+
+
+class Trial:
+    def __init__(self, images, important_category, trial_type):
+        self.images = images
+        self.important_category = important_category
+        self.trial_type = trial_type
+
+    def setup_tracker(self, window, tracker, fix, auto_run):
+        # Check for fixation
+        tracker.fixCheck(2, 0.1, 'z')
+
+        # Pupil time
+        tracker.setStatus('Pupil Time')
+        tracker.setTrialID()
+        tracker.drawIA(0, 0, 2, 1, 1, 'pfixation')
+        tracker.sendMessage('pupiltime')
+        fix.draw()
+        tracker.recordON()
+        window.flip()
+        if not auto_run:
+            core.wait(1)
+        tracker.recordOFF()
+        tracker.setTrialResult()
+
+    def setup_images(self, tracker):
+        # Randomize coordinates
+        coords = [(x, y) for y in [-4, 0, 4] for x in np.linspace(-10, 10, 4)]
+        del coords[5:7]  # Delete the middle section
+        coords = [xy + np.random.uniform(-0.5, 0.5, 2) for xy in coords]
+
+        # Draw IAs
+        tracker.drawIA(0, 0, 2, 1, 1, 'fixation')
+        for index, xy in enumerate(coords):
+            image = self.images[index]
+
+            image.image_stim.setPos(xy)
+
+            # set name
+            if image.categories[0] == self.important_category.target:
+                name = 'target.' + image.image_stim.name
+            elif image.categories[0] == self.important_category.similar:
+                name = 'similar.' + image.image_stim.name
+            else:
+                name = 'nonTarget.' + image.image_stim.name
+
+            tracker.drawIA(xy[0], xy[1], 3, index + 2, index + 2, name)
+
+    def draw_loop(self, window, dots, auto_run):
+        keyps = []
+        start_time = None
+        while not keyps:
+            # Images
+            for image in self.images:
+                image.image_stim.draw()
+
+            # Dots
+            dots.draw()
+
+            # Display
+            flip_time = window.flip()
+            if not start_time:
+                start_time = flip_time
+
+            # Check for key press
+            keyps = event.getKeys(keyList=['space', 'return', 'escape'],
+                                  timeStamped=True)
+            
+            if auto_run and not keyps: # Have the computer give a response if auto_run is set
+                return (
+                    choice(['space', 'return']), # Return a random key
+                    0, # Zero response time for computers
+                )
+            
+        return (
+            keyps[0][0],  # Key pressed
+            start_time - keyps[0][1],  # Response time
+        )
+
+
 class Block:
     def __init__(self, number_of_target_trials, number_of_similars_trials, number_of_random_trials):
         self.number_of_target_trials = number_of_target_trials
@@ -119,7 +254,7 @@ class Block:
                                     ])
             while len(trial_images) < 10:
                 distractor = choice(all_distractors)
-                is_duplicate = False  # Default to not a duplicate
+                is_duplicate = False  # Default state is 'not a duplicate'
                 for image in trial_images:
                     if image.categories[0] == distractor.categories[0]:
                         is_duplicate = True
@@ -127,7 +262,8 @@ class Block:
                 if not is_duplicate:  # Only add non-duplicates to the trial images
                     trial_images.append(distractor)
 
-            trials.append(Trial(trial_images, important_category, 'target'))
+            trials.append(
+                Trial(images=trial_images, important_category=important_category, trial_type='target'))
         return trials
 
     def generate_similar_trials(self, important_category, all_target_images, all_distractors, all_similar_images,
@@ -155,7 +291,8 @@ class Block:
                 if not is_duplicate:
                     trial_images.append(distractor)
 
-            trials.append(Trial(trial_images, important_category, 'similar'))
+            trials.append(
+                Trial(images=trial_images, important_category=important_category, trial_type='similar'))
         return trials
 
     def generate_random_trials(self, important_category, all_distractors, distractors_by_level1):
@@ -253,8 +390,8 @@ class Experiment:
         
         total_trials = sum(block.total_trials for block in self.blocks)
         current_trial_num = 1
-        for block_num, block in enumerate(self.blocks):
-            for trial_num, trial in enumerate(block.generate_trials(self.images, self.subject.target)):
+        for block_num, block in enumerate(self.blocks): # Go through all the blocks
+            for trial_num, trial in enumerate(block.generate_trials(self.images, self.subject.target)): # For the current block, generate the trials and go through them
                 current_trial_num += 1
 
                 if image_log_file:
@@ -343,141 +480,6 @@ class Experiment:
         core.quit()
 
 
-class Subject:
-    def __init__(self, id, target):
-        self.id = id
-        self.target = target
-
-
-class Trial:
-    def __init__(self, images, important_category, trial_type):
-        self.images = images
-        self.important_category = important_category
-        self.trial_type = trial_type
-
-    def setup_tracker(self, window, tracker, fix, auto_run):
-        # Check for fixation
-        tracker.fixCheck(2, 0.1, 'z')
-
-        # Pupil time
-        tracker.setStatus('Pupil Time')
-        tracker.setTrialID()
-        tracker.drawIA(0, 0, 2, 1, 1, 'pfixation')
-        tracker.sendMessage('pupiltime')
-        fix.draw()
-        tracker.recordON()
-        window.flip()
-        if not auto_run:
-            core.wait(1)
-        tracker.recordOFF()
-        tracker.setTrialResult()
-
-    def setup_images(self, tracker):
-        # Randomize coordinates
-        coords = [(x, y) for y in [-4, 0, 4] for x in np.linspace(-10, 10, 4)]
-        del coords[5:7]  # Delete the middle section
-        coords = [xy + np.random.uniform(-0.5, 0.5, 2) for xy in coords]
-
-        # Draw IAs
-        tracker.drawIA(0, 0, 2, 1, 1, 'fixation')
-        for index, xy in enumerate(coords):
-            image = self.images[index]
-
-            image.image_stim.setPos(xy)
-
-            # set name
-            if image.categories[0] == self.important_category.target:
-                name = 'target.' + image.image_stim.name
-            elif image.categories[0] == self.important_category.similar:
-                name = 'similar.' + image.image_stim.name
-            else:
-                name = 'nonTarget.' + image.image_stim.name
-
-            tracker.drawIA(xy[0], xy[1], 3, index + 2, index + 2, name)
-
-    def draw_loop(self, window, dots, auto_run):
-        keyps = []
-        start_time = None
-        while not keyps:
-            # Images
-            for image in self.images:
-                image.image_stim.draw()
-
-            # Dots
-            dots.draw()
-
-            # Display
-            flip_time = window.flip()
-            if not start_time:
-                start_time = flip_time
-
-            # Check for key press
-            keyps = event.getKeys(keyList=['space', 'return', 'escape'],
-                                  timeStamped=True)
-            
-            if auto_run and not keyps: # Have the computer give a response if auto_run is set
-                return (
-                    choice(['space', 'return']), # Return a random key
-                    0, # Zero response time for computers
-                )
-            
-        return (
-            keyps[0][0],  # Key pressed
-            start_time - keyps[0][1],  # Response time
-        )
-
-
-# TUT Probe
-class TUTProbe:
-    def __init__(self, win):
-        self.win = win
-        # Make scale
-        rtxt = ('On the scale below, rate the duration of task unrelated thoughts '
-                'since the last probe')
-        self.rtxtob = visual.TextStim(self.win, text=rtxt, pos=(0, 3), height=1,
-                                      color=-1)
-
-        # Define rating scale
-        sctxt = '0 = Not at all ... 5 = The whole time'
-        self.ratingScale = visual.RatingScale(self.win, low=0, high=5, scale=sctxt,
-                                              labels=map(str, range(6)),
-                                              tickMarks=range(6), textColor=-1,
-                                              lineColor=-1, noMouse=True)
-        # Initiate TUTprop clock
-        self.time = core.Clock()
-        self.next_probe = np.random.randint(15, 31)
-
-    def try_probe(self, is_last_trial):
-        probetime = self.time.getTime()
-        # Only test TUT every 15-31 seconds (randomly) or on the last trial
-        if probetime >= self.next_probe or is_last_trial:
-            # Prope TUT severity & reset
-            tutrating = self.probe()
-            self.time.reset()
-            self.next_probe = np.random.randint(15, 31)
-
-            # Save Results
-            return (
-                tutrating,
-                round(probetime, 2)
-            )
-        else:
-            return (0, 0)
-
-    # Function for display
-    def probe(self):
-        # Display and collect response
-        while self.ratingScale.noResponse:
-            self.rtxtob.draw()
-            self.ratingScale.draw()
-            self.win.flip()
-
-        # Return and Reset
-        rating = self.ratingScale.getRating()
-        self.ratingScale.reset()
-        return rating
-
-
 def create_subject(important_categories):
     # Make a dictionary of target to category
     target_options = dict([(category.target, category) for category in important_categories])
@@ -514,7 +516,7 @@ def load_images(window, source_dir):
             fsplit[-3],  # Example: "Mammals"
         ]
         name = os.path.splitext(fsplit[-1])[0]  # Cut off ".jpg" from file name
-        # Load the image stimulus (example name: "Canidae.can_1"
+        # Load the image stimulus (example name: "Canidae.can_1")
         image_stim = visual.ImageStim(window, image_file, size=3, name='{}.{}'.format(categories[0], name))
 
         images.append(Image(name, categories, image_stim))  # Fills image list
