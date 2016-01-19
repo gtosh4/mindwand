@@ -317,7 +317,7 @@ def load_trials(window, image_dir, trials_dir, target):
         if row_num == 0:
             # Skip the header row
             continue
-        tnum = row[0]
+        tnum = int(row[0])
         name = row[1]
         position = row[2]
         trial_type = row[3]
@@ -391,7 +391,7 @@ def main():
         trials=trials,
     )
     output_file = csv.writer(open(os.path.join(os.getcwd(), 'data_exp2', subject.id + '_mindwand_exp2.csv'), 'wb'))
-    experiment_path = 'C:\\edfs\\Nick\\mindwand\\'
+    experiment_path = 'C:\\Dropbox\\Exps_Nick\\mindwand\\edfs_exp2\\'
 
     exp.run(window, tracker, output_file, experiment_path)
 
