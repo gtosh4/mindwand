@@ -212,7 +212,7 @@ class Experiment:
         output_file.writerow(header)
 
         total_trials = len(self.trials)
-        current_trial_num = 1
+        current_trial_num = 0
         for trial_num, trial in enumerate(self.trials): # Go through trials
             current_trial_num += 1
 
