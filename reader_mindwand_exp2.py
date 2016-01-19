@@ -184,6 +184,7 @@ class Experiment:
             'sub',      # Subject id
             'tcateg',   # Target category
             'tnum',     # Trial number
+            'bnum',     # Block number
             'tar',      # If target was present
             'sim',      # If similar was present
             'resp',     # The response key
@@ -248,6 +249,7 @@ class Experiment:
                 sub=subject_id,
                 tcateg=target_category,
                 tnum=current_trial_num,
+                bnum=(block_num + 1),
                 tar=(trial.trial_type == 'target' or trial.trial_type == 'similar'),
                 sim=(trial.trial_type == 'similar'),
                 resp=key,
@@ -299,10 +301,7 @@ def load_trials(window, image_dir, trials_dir, target):
     
     trials_file = csv.reader(open(os.path.join(trials_dir, target + '_recorder.csv'), 'rb'))
     trial_specification = {}
-    for row_num, row in enumerate(trials_file):
-        if row_num == 0:
-            # Skip the header row
-            continue
+    for row in trials_file:
         tnum = row[0]
         name = row[1]
         position = row[2]
