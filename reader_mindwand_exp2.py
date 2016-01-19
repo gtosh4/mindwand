@@ -78,7 +78,8 @@ class TUTProbe:
 
 
 class Trial:
-    def __init__(self, images, trial_type):
+    def __init__(self, trial_num, images, trial_type):
+        self.trial_num = trial_num
         self.images = images
         self.trial_type = trial_type
 
@@ -344,6 +345,9 @@ def load_trials(window, image_dir, trials_dir, target):
         
     trials = []
     for tnum, trial_image_specification in trial_specification.iteritems():
+        # Sort the images by position
+        trial_image_specification = sorted(trial_image_specification, key=lambda spec: spec[1])
+        
         trial_images = []
         for specification in trial_image_specification:
             spec_image_name = specification[0]
@@ -351,8 +355,11 @@ def load_trials(window, image_dir, trials_dir, target):
                 raise AssertionError('No image by name {} found. Found images: {}'.format(spec_image_name, ','.join(images.keys())))
             else:
                 trial_images.append(images[spec_image_name])
-        trials.append(Trial(images=trial_images, trial_type=trial_image_specification[0][2]))
-        
+        trial_type = trial_image_specification[0][2] # All specs should have the same type for the same trial
+        trials.append(Trial(trial_num=tnum, images=trial_images, trial_type=trial_type))
+
+    # Sort the trials by the trial num so it runs them in the correct order
+    trials = sorted(trials, key=lambda trial: trial.trial_num)
     return trials
 
 
