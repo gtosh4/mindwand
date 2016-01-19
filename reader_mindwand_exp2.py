@@ -144,6 +144,18 @@ class Experiment:
         self.subject = subject
         self.questions = questions
         self.trials = trials
+        
+    def instruct(self, window, tcat):
+        # Show instructions
+        itxt = ('You are looking for {}!\n\n'
+                'If one is present - press ENTER\n\n'
+                'If one is NOT present - press the SPACEBAR'.format(tcat))
+        
+        itxt = itxt.replace('_', ' ')
+        
+        visual.TextStim(win, itxt, color = -1, wrapWidth = 25).draw()
+        win.flip()
+        event.waitKeys()
 
     def ask_questions(self, window):
         question_responses = []
@@ -165,7 +177,8 @@ class Experiment:
         subject_id = self.subject.id
         target_category = self.subject.target
         question_responses = self.ask_questions(window)
-
+        self.instruct(window, target_category)
+        
         # Stimuli
         fix = visual.Circle(window, radius=0.125, pos=(0, 0), fillColor=-1,
                             lineColor=-1)
@@ -184,7 +197,6 @@ class Experiment:
             'sub',      # Subject id
             'tcateg',   # Target category
             'tnum',     # Trial number
-            'bnum',     # Block number
             'tar',      # If target was present
             'sim',      # If similar was present
             'resp',     # The response key
@@ -249,7 +261,6 @@ class Experiment:
                 sub=subject_id,
                 tcateg=target_category,
                 tnum=current_trial_num,
-                bnum=(block_num + 1),
                 tar=(trial.trial_type == 'target' or trial.trial_type == 'similar'),
                 sim=(trial.trial_type == 'similar'),
                 resp=key,
@@ -301,7 +312,10 @@ def load_trials(window, image_dir, trials_dir, target):
     
     trials_file = csv.reader(open(os.path.join(trials_dir, target + '_recorder.csv'), 'rb'))
     trial_specification = {}
-    for row in trials_file:
+    for row_num, row in enumerate(trials_file):
+        if row_num == 0:
+            # Skip the header row
+            continue
         tnum = row[0]
         name = row[1]
         position = row[2]
