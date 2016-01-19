@@ -154,8 +154,8 @@ class Experiment:
         
         itxt = itxt.replace('_', ' ')
         
-        visual.TextStim(win, itxt, color = -1, wrapWidth = 25).draw()
-        win.flip()
+        visual.TextStim(window, itxt, color = -1, wrapWidth = 25).draw()
+        window.flip()
         event.waitKeys()
 
     def ask_questions(self, window):
