@@ -78,8 +78,7 @@ class TUTProbe:
 
 
 class Trial:
-    def __init__(self, trial_num, images, trial_type):
-        self.trial_num = trial_num
+    def __init__(self, images, trial_type):
         self.images = images
         self.trial_type = trial_type
 
@@ -356,10 +355,10 @@ def load_trials(window, image_dir, trials_dir, target):
             else:
                 trial_images.append(images[spec_image_name])
         trial_type = trial_image_specification[0][2] # All specs should have the same type for the same trial
-        trials.append(Trial(trial_num=tnum, images=trial_images, trial_type=trial_type))
+        trials.append(Trial(images=trial_images, trial_type=trial_type))
 
     # Sort the trials by the trial num so it runs them in the correct order
-    trials = sorted(trials, key=lambda trial: trial.trial_num)
+    shuffle(trials)
     return trials
 
 
