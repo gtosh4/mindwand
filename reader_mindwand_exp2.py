@@ -78,9 +78,10 @@ class TUTProbe:
 
 
 class Trial:
-    def __init__(self, images, trial_type):
+    def __init__(self, images, trial_type, recorder_trial):
         self.images = images
         self.trial_type = trial_type
+        self.recorder_trial = recorder_trial
 
     def setup_tracker(self, window, tracker, fix):
         # Check for fixation
@@ -113,7 +114,7 @@ class Trial:
 
             tracker.drawIA(xy[0], xy[1], 3, index + 2, index + 2, image.image_stim.name)
 
-    def draw_loop(self, window, dots):
+    def draw_loop(self, window, dots, keyList=['space', 'return', 'escape']):
         keyps = []
         start_time = None
         while not keyps:
@@ -130,54 +131,120 @@ class Trial:
                 start_time = flip_time
 
             # Check for key press
-            keyps = event.getKeys(keyList=['space', 'return', 'escape'],
+            keyps = event.getKeys(keyList=keyList,
                                   timeStamped=True)
 
         return (
             keyps[0][0],  # Key pressed
-            start_time - keyps[0][1],  # Response time
+            keyps[0][1] - start_time,  # Response time
         )
 
 
 class Experiment:
-    def __init__(self, subject, questions, trials):
+    def __init__(self, subject, questions, trials, examples):
         self.subject = subject
         self.questions = questions
         self.trials = trials
-        
-    def instruct(self, window, tcat):
-        # Show instructions
-        itxt = ('You are looking for {}!\n\n'
-                'If one is present - press ENTER\n\n'
-                'If one is NOT present - press the SPACEBAR'.format(tcat))
-        
-        itxt = itxt.replace('_', ' ')
-        
-        visual.TextStim(window, itxt, color = -1, wrapWidth = 25).draw()
-        window.flip()
-        event.waitKeys()
+        self.examples = examples
 
     def ask_questions(self, window):
+        instructions_shown = False
+        instruction_text = visual.TextStim(window, text='Throughout the experiment, you will see questions in the format shown. \n\nUse the arrow keys to make a selection and press enter.', color=-1, pos=(0,10)) # Instruction text
         question_responses = []
         for question, scale in self.questions:
             question_text = visual.TextStim(window, text=question, color=-1)  # Question text
             scale_rating = visual.RatingScale(window, scale=scale, textColor=-1,
                                               lineColor=-1, noMouse=True)  # Scale rating
-            # Update until response
+            # Update until response, show instructions once
             while scale_rating.noResponse:
+                if not instructions_shown:
+                    instruction_text.draw()
                 question_text.draw()
                 scale_rating.draw()
                 window.flip()
+            instructions_shown = True
 
             question_responses.append(scale_rating.getRating())
             scale_rating.reset()
         return question_responses
 
+    def instruct(self, window, tracker, tcat):
+        # Show instructions
+        itxt = ('You will be given a target category. You will see 10 images on the screen.\n\n'
+                'If image of target is present - press ENTER!\n\n'
+                'If image of target is NOT present - press the SPACEBAR!\n\n'
+                '(press any key to continue)')
+        
+        visual.TextStim(window, itxt, color = -1, wrapWidth = 25).draw()
+        window.flip()
+        event.waitKeys()
+        
+        itxt = ('After each trial, there will be a dot in the center of the screen.\n\n'
+                'You must continue to look at the dot for the next set of images to appear.\n\n'
+                '(press any key to continue)')
+                
+        visual.TextStim(window, itxt, color = -1, wrapWidth = 25).draw()
+        window.flip()
+        event.waitKeys()
+        
+        itxt = ('We will run through some example trials.\n\n'
+                'In these examples, your target category is the color RED!\n\n'
+                'If a red box is present - press ENTER!\n\n'
+                'If a red box is NOT present - press the SPACEBAR!\n\n'
+                '(press any key to continue)')
+        
+        visual.TextStim(window, itxt, color = -1, wrapWidth = 25).draw()
+        window.flip()
+        event.waitKeys()
+
+        fix = visual.Circle(window, radius=0.125, pos=(0, 0), fillColor=-1, lineColor=-1)
+        dots = visual.DotStim(window, coherence=0, fieldSize=(25, 15), color=-1, nDots=10000)
+        for example in self.examples:
+            example.setup_tracker(window, tracker, fix)
+            example.setup_images(tracker)
+            event.clearEvents()
+            keyList = ['return'] if example.trial_type == 'target' else ['space']
+            key, response_time = example.draw_loop(window, dots, keyList = keyList)
+            fix.draw()
+            window.flip()
+            core.wait(2)
+
+        itxt = ('Throughout the experiment, you will see a question that asks "rate the duration of task unrelated thoughts since the last probe"\n\n'
+                "These are thoughts that aren't about the task of looking for your target, so it is essentially asking if you were daydreaming.\n\n"
+                "If you were on task the whole time, you will answer a 0 and if you daydreamt the whole time, you will answer a 5. There's also the in-between choices of 1, 2, 3, and 4.\n\n"
+                '(press any key to continue to example)')
+        
+        visual.TextStim(window, itxt, color = -1, wrapWidth = 25).draw()
+        window.flip()
+        event.waitKeys()
+
+        tut = TUTProbe(window)
+        tut.probe()
+        
+        itxt = ('Our experimental goal is to look at task unrelated thoughts so if they do occur, feel free to answer honestly but try report your task unrelated thoughts accurately!\n\n'
+                '(press any key to continue)')
+        
+        visual.TextStim(window, itxt, color = -1, wrapWidth = 25).draw()
+        window.flip()
+        event.waitKeys()
+        
+        ttxt = ("Let's begin the experiment.\n\n"
+                'You are looking for {}!\n\n'
+                'If one is present - press ENTER!\n\n'
+                'If one is NOT present - press the SPACEBAR!\n\n'
+                'If have any questions, ask your researcher; otherwise, press any key to begin.'.format(tcat))
+        
+        ttxt = ttxt.replace('_', ' ')
+        
+        visual.TextStim(window, ttxt, color = -1, wrapWidth = 25).draw()
+        window.flip()
+        event.waitKeys()
+
     def run(self, window, tracker, output_file, experiment_path):
         subject_id = self.subject.id
         target_category = self.subject.target
         question_responses = self.ask_questions(window)
-        self.instruct(window, target_category)
+        self.instruct(window, tracker, target_category)
         
         # Stimuli
         fix = visual.Circle(window, radius=0.125, pos=(0, 0), fillColor=-1,
@@ -207,6 +274,7 @@ class Experiment:
             'tuttime',  # TUT test time
             'hunger',   # The first question's response
             'tired',    # The second question's response
+            'recorder_trial', # Trial number from recorder file
         ]
         output_file.writerow(header)
 
@@ -271,6 +339,7 @@ class Experiment:
                 tuttime=tuttime,
                 hunger=question_responses[0],
                 tired=question_responses[1],
+                recorder_trial=trial.recorder_trial,
             )
 
             # Eye-tracker post-stim
@@ -324,7 +393,20 @@ def load_trials(window, image_dir, trials_dir, target):
             trial_specification[tnum] = []
         trial_specification[tnum].append((name, position, trial_type))
 
-    # Find all the images files within source_dir
+    examples_file = csv.reader(open(os.path.join(trials_dir, 'example.csv'), 'rb'))
+    example_specification = {}
+    for row_num, row in enumerate(examples_file):
+        if row_num == 0:
+            continue
+        tnum = int(row[0])
+        name = row[1]
+        position = row[2]
+        trial_type = row[3]
+        if tnum not in example_specification:
+            example_specification[tnum] = []
+        example_specification[tnum].append((name, position, trial_type))
+        
+    # Find all the images files within image_dir
     image_files = [
         os.path.join(dirpath, f)
         for dirpath, dirnames, files in os.walk(image_dir)
@@ -355,24 +437,40 @@ def load_trials(window, image_dir, trials_dir, target):
             else:
                 trial_images.append(images[spec_image_name])
         trial_type = trial_image_specification[0][2] # All specs should have the same type for the same trial
-        trials.append(Trial(images=trial_images, trial_type=trial_type))
+        trials.append(Trial(images=trial_images, trial_type=trial_type, recorder_trial=tnum))
+        
+    examples = []
+    for tnum, example_image_specification in example_specification.iteritems():
+        example_image_specification = sorted(example_image_specification, key=lambda spec: spec[1])
+        
+        example_images = []
+        for specification in example_image_specification:
+            spec_image_name = specification[0]
+            if spec_image_name not in images:
+                raise AssertionError('No image by name {} found. Found images: {}'.format(spec_image_name, ','.join(images.keys())))
+            else:
+                example_images.append(images[spec_image_name])
+        example_type = example_image_specification[0][2] # All specs should have the same type for the same trial
+        examples.append(Trial(images=example_images, trial_type=example_type, recorder_trial=tnum))
 
-    # Sort the trials by the trial num so it runs them in the correct order
+    # Shuffle the trials
     shuffle(trials)
-    return trials
+    examples = sorted(examples, key=lambda example: example.recorder_trial)
+    return (trials, examples)
 
 
 def main():
     subject = create_subject(
         targets=[
             'Cats',
+            'Utility_Vehicles',
         ])
     # Create the window after creating the subject so that the window doesn't block the view of the
     # subject dialog box
-    window = visual.Window([2560, 1440], monitor='PhilMon', units='deg',
+    window = visual.Window([1360, 768], monitor='samsung', units='deg',
                            fullscr=True, allowGUI=False,
                            color=1, screen=0)
-    trials=load_trials(
+    trials, examples=load_trials(
         window=window,
         image_dir=os.path.join(os.getcwd(), 'images_exp2'),
         trials_dir=os.path.join(os.getcwd(), 'trials_exp2'),
@@ -388,6 +486,7 @@ def main():
             ('How tired are you?', '1 = Not tired ... 7 = Very tired'),
         ],
         trials=trials,
+        examples=examples,
     )
     output_file = csv.writer(open(os.path.join(os.getcwd(), 'data_exp2', subject.id + '_mindwand_exp2.csv'), 'wb'))
     experiment_path = 'C:\\Dropbox\\Exps_Nick\\mindwand\\edfs_exp2\\'
