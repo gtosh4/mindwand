@@ -312,7 +312,7 @@ class Experiment:
                 core.quit()
 
             # Parse Response
-            if trial.trial_type == 'target':
+            if trial.trial_type == 'target' or trail.trial_type == 'similar':
                 response_type = (
                     'hi' if key == 'return'
                     else 'mi' if key == 'space'
