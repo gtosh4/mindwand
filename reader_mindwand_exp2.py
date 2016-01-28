@@ -84,6 +84,9 @@ class Trial:
         self.recorder_trial = recorder_trial
 
     def setup_tracker(self, window, tracker, fix):
+        fix.draw()
+        win.flip()
+        
         # Check for fixation
         tracker.fixCheck(2, 0.1, 'z')
 
