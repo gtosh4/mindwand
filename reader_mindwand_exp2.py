@@ -61,7 +61,7 @@ class TUTProbe:
                 round(probetime, 2)
             )
         else:
-            return (0, 0)
+            return ('NA', 'NA')
 
     # Function for display
     def probe(self):
@@ -303,6 +303,8 @@ class Experiment:
 
             # Draw images and await a response
             key, response_time = trial.draw_loop(window, dots)
+
+            tracket.recordOFF()
 
             # Quit?
             if key == 'escape':
