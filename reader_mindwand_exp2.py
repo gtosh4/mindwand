@@ -41,7 +41,7 @@ class TUTProbe:
         self.ratingScale = visual.RatingScale(self.win, low=0, high=5, scale=sctxt,
                                               labels=map(str, range(6)),
                                               tickMarks=range(6), textColor=-1,
-                                              lineColor=-1, noMouse=True)
+                                              lineColor=-1, noMouse=True, respKeys = ['num_0', 'num_1', 'num_2', 'num_3', 'num_4', 'num_5'])
         # Initiate TUTprop clock
         self.time = core.Clock()
         self.next_probe = np.random.randint(15, 31)
@@ -84,23 +84,20 @@ class Trial:
         self.recorder_trial = recorder_trial
 
     def setup_tracker(self, window, tracker, fix):
-        fix.draw()
-        win.flip()
-        
         # Check for fixation
-        tracker.fixCheck(2, 0.1, 'z')
+        tracker.fix_check(2, 0.1, 'z')
 
         # Pupil time
-        tracker.setStatus('Pupil Time')
-        tracker.setTrialID()
-        tracker.drawIA(0, 0, 2, 1, 1, 'pfixation')
-        tracker.sendMessage('pupiltime')
+        tracker.set_status('Pupil Time')
+        tracker.set_trialid()
+        tracker.draw_ia(0, 0, 2, 1, 1, 'pfixation')
+        tracker.send_message('pupiltime')
         fix.draw()
-        tracker.recordON()
+        tracker.record_on()
         window.flip()
         core.wait(1)
-        tracker.recordOFF()
-        tracker.setTrialResult()
+        tracker.record_off()
+        tracker.set_trialresult()
 
     def setup_images(self, tracker):
         # Randomize coordinates
@@ -109,13 +106,13 @@ class Trial:
         coords = [xy + np.random.uniform(-0.5, 0.5, 2) for xy in coords]
 
         # Draw IAs
-        tracker.drawIA(0, 0, 2, 1, 1, 'fixation')
+        tracker.draw_ia(0, 0, 2, 1, 1, 'fixation')
         for index, xy in enumerate(coords):
             image = self.images[index]
 
             image.image_stim.setPos(xy)
 
-            tracker.drawIA(xy[0], xy[1], 3, index + 2, index + 2, image.image_stim.name)
+            tracker.draw_ia(xy[0], xy[1], 3, index + 2, index + 2, image.image_stim.name)
 
     def draw_loop(self, window, dots, keyList=['space', 'return', 'escape']):
         keyps = []
@@ -152,12 +149,12 @@ class Experiment:
 
     def ask_questions(self, window):
         instructions_shown = False
-        instruction_text = visual.TextStim(window, text='Throughout the experiment, you will see questions in the format shown. \n\nUse the arrow keys to make a selection and press enter.', color=-1, pos=(0,10)) # Instruction text
+        instruction_text = visual.TextStim(window, text='Throughout the experiment, you will see questions in the format shown. \n\nUse the number keys in the number pad to make a selection and press enter.', color=-1, pos=(0,8)) # Instruction text
         question_responses = []
         for question, scale in self.questions:
             question_text = visual.TextStim(window, text=question, color=-1)  # Question text
             scale_rating = visual.RatingScale(window, scale=scale, textColor=-1,
-                                              lineColor=-1, noMouse=True)  # Scale rating
+                                              lineColor=-1, noMouse=True, respKeys = ['num_1', 'num_2', 'num_3', 'num_4', 'num_5','num_6', 'num_7'])  # Scale rating
             # Update until response, show instructions once
             while scale_rating.noResponse:
                 if not instructions_shown:
@@ -194,7 +191,7 @@ class Experiment:
                 'In these examples, your target category is the color RED!\n\n'
                 'If a red box is present - press ENTER!\n\n'
                 'If a red box is NOT present - press the SPACEBAR!\n\n'
-                '(press any key to continue)')
+                '(look towards middle of screen and press any key to continue)')
         
         visual.TextStim(window, itxt, color = -1, wrapWidth = 25).draw()
         window.flip()
@@ -235,7 +232,7 @@ class Experiment:
                 'You are looking for {}!\n\n'
                 'If one is present - press ENTER!\n\n'
                 'If one is NOT present - press the SPACEBAR!\n\n'
-                'If have any questions, ask your researcher; otherwise, press any key to begin.'.format(tcat))
+                'PLEASE WAIT FOR RESEARCHER TO PROMPT YOU TO BEGIN.'.format(tcat))
         
         ttxt = ttxt.replace('_', ' ')
         
@@ -292,13 +289,13 @@ class Experiment:
             statmsg = 'Experiment {}%% complete. Current Trial: {}'.format(
                 round(current_trial_num / total_trials, 3) * 100,
                 current_trial_num)
-            tracker.setStatus(statmsg)
-            tracker.setTrialID()
+            tracker.set_status(statmsg)
+            tracker.set_trialid()
 
             trial.setup_images(tracker)
 
             # Start recording
-            tracker.recordON()
+            tracker.record_on()
 
             # Reset for upcoming stimulus display
             event.clearEvents()
@@ -306,16 +303,24 @@ class Experiment:
 
             # Draw images and await a response
             key, response_time = trial.draw_loop(window, dots)
-
-            tracket.recordOFF()
+            
+            '''# Print screen
+            fileName = 'screenshot' + str(trial.recorder_trial)
+            window.getMovieFrame()
+            fileName = str(fileName) +'.jpeg'
+            window.saveMovieFrames(fileName)
+            tracker.recordOFF()
+            window.MovieFrames=[]'''
+            
+            tracker.record_off()
 
             # Quit?
             if key == 'escape':
-                tracker.endExperiment(experiment_path)
+                tracker.end_experiment(experiment_path)
                 core.quit()
 
             # Parse Response
-            if trial.trial_type == 'target' or trail.trial_type == 'similar':
+            if trial.trial_type == 'target':
                 response_type = (
                     'hi' if key == 'return'
                     else 'mi' if key == 'space'
@@ -338,6 +343,7 @@ class Experiment:
                 sim=(trial.trial_type == 'similar'),
                 resp=key,
                 rtype=response_type,
+
                 rt=response_time,
                 time=trial_time,
                 tutra=tutra,
@@ -349,8 +355,8 @@ class Experiment:
 
             # Eye-tracker post-stim
             for key, value in trial_results.iteritems():
-                tracker.sendVar(key, value)
-            tracker.setTrialResult()
+                tracker.send_var(key, value)
+            tracker.set_trialresult()
 
             # Write trial info
             output_file.writerow([trial_results[col] for col in header])
@@ -360,7 +366,7 @@ class Experiment:
             window.flip()
             core.wait(2)
 
-        tracker.endExperiment(experiment_path)
+        tracker.end_experiment(experiment_path)
         core.quit()
 
 
@@ -472,7 +478,7 @@ def main():
         ])
     # Create the window after creating the subject so that the window doesn't block the view of the
     # subject dialog box
-    window = visual.Window([1360, 768], monitor='samsung', units='deg',
+    window = visual.Window([2560, 1440], monitor='Asus', units='deg',
                            fullscr=True, allowGUI=False,
                            color=1, screen=0)
     trials, examples=load_trials(
@@ -481,7 +487,7 @@ def main():
         trials_dir=os.path.join(os.getcwd(), 'trials_exp2'),
         target=subject.target
     )
-    tracker = pylinkwrapper.connect(window, subject.id)
+    tracker = pylinkwrapper.connector.Connect(window, subject.id)
     tracker.tracker.setPupilSizeDiameter('YES')
     tracker.calibrate()
     exp = Experiment(
@@ -494,7 +500,7 @@ def main():
         examples=examples,
     )
     output_file = csv.writer(open(os.path.join(os.getcwd(), 'data_exp2', subject.id + '_mindwand_exp2.csv'), 'wb'))
-    experiment_path = 'C:\\Dropbox\\Exps_Nick\\mindwand\\edfs_exp2\\'
+    experiment_path = 'C:\\Dropbox\\Exps_Jessica\\mindwand\\edfs_exp2\\'
 
     exp.run(window, tracker, output_file, experiment_path)
 
